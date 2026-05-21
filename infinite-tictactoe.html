@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>∞ TIC TAC TOE</title>
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -720,9 +721,129 @@ h1, h2, h3 { font-family: 'Orbitron', monospace; }
   padding: 40px 20px;
   letter-spacing: 0.1em;
 }
+
+/* ===== PI AUTH OVERLAY ===== */
+#pi-auth-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-deep);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 24px;
+  background-image:
+    radial-gradient(ellipse at 20% 30%, rgba(0,180,255,0.07) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 70%, rgba(180,79,255,0.07) 0%, transparent 55%);
+  transition: opacity 0.5s ease;
+}
+#pi-auth-overlay.hiding { opacity: 0; pointer-events: none; }
+
+.pi-logo-mark {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  border: 2px solid var(--neon-blue);
+  box-shadow: var(--glow-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Orbitron', monospace;
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: var(--neon-blue);
+  text-shadow: var(--glow-blue);
+  margin: 0 auto 16px;
+  animation: piMarkPulse 2.5s ease-in-out infinite;
+}
+@keyframes piMarkPulse {
+  0%,100% { box-shadow: var(--glow-blue); }
+  50% { box-shadow: 0 0 24px #00d4ff, 0 0 60px #00d4ff66, 0 0 100px #00d4ff33; }
+}
+.pi-auth-title {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(1.3rem, 4vw, 2rem);
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--neon-blue), var(--neon-mauve));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+  text-align: center;
+}
+.pi-auth-sub { font-size: 0.78rem; letter-spacing: 0.25em; color: var(--text-dim); text-align: center; }
+
+.pi-user-card {
+  background: var(--bg-card);
+  border: 1px solid var(--neon-blue);
+  box-shadow: var(--glow-blue);
+  padding: 20px 28px;
+  text-align: center;
+  max-width: 320px;
+  width: 100%;
+  display: none;
+}
+.pi-user-card.visible { display: block; }
+.pi-user-avatar { font-size: 2.5rem; margin-bottom: 10px; }
+.pi-user-name { font-family: 'Orbitron', monospace; font-size: 1rem; font-weight: 700; color: var(--neon-blue); letter-spacing: 0.15em; }
+.pi-user-uid { font-size: 0.6rem; color: var(--text-dim); letter-spacing: 0.08em; margin-top: 4px; word-break: break-all; }
+
+.pi-status-msg { font-size: 0.72rem; letter-spacing: 0.2em; color: var(--text-dim); min-height: 20px; text-align: center; }
+.pi-status-msg.error { color: #ff4466; }
+.pi-status-msg.success { color: #00ff88; }
+
+.pi-actions { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 320px; align-items: center; }
+
+/* Pi badge shown in game header after auth */
+.pi-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  color: var(--neon-blue);
+  border: 1px solid rgba(0,212,255,0.3);
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Orbitron', monospace;
+}
+.pi-badge:hover { border-color: var(--neon-blue); box-shadow: var(--glow-blue); }
+.pi-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--neon-blue); box-shadow: var(--glow-blue); }
 </style>
 </head>
 <body>
+
+<!-- PI AUTH OVERLAY -->
+<div id="pi-auth-overlay">
+  <div>
+    <div class="pi-logo-mark">π</div>
+    <div class="pi-auth-title">∞ TIC TAC TOE</div>
+    <div class="pi-auth-sub">PI NETWORK · INFINITE LOOP EDITION</div>
+  </div>
+
+  <div class="pi-user-card" id="pi-user-card">
+    <div class="pi-user-avatar">⚡</div>
+    <div class="pi-user-name" id="pi-user-name-display">—</div>
+    <div class="pi-user-uid" id="pi-user-uid-display"></div>
+  </div>
+
+  <div class="pi-status-msg" id="pi-status-msg">Connexion au Pi Browser…</div>
+
+  <div class="pi-actions">
+    <button class="btn btn-primary" id="pi-signin-btn" onclick="triggerPiAuth()" style="display:none;width:100%;max-width:320px;">
+      SE CONNECTER AVEC PI
+    </button>
+    <button class="btn btn-primary" id="pi-enter-btn" onclick="dismissAuthOverlay()" style="display:none;width:100%;max-width:320px;">
+      ENTRER DANS LE JEU →
+    </button>
+    <button class="btn btn-ghost btn-sm" id="pi-skip-btn" onclick="dismissAuthOverlay()" style="display:none;">
+      CONTINUER SANS CONNEXION
+    </button>
+  </div>
+</div>
 
 <!-- MENU SCREEN -->
 <div id="menu-screen" class="screen active">
@@ -802,6 +923,10 @@ h1, h2, h3 { font-family: 'Orbitron', monospace; }
     <div class="ai-thinking" id="ai-thinking">
       <span>IA CALCULE</span>
       <div class="dot-pulse"><span></span><span></span><span></span></div>
+    </div>
+    <div id="pi-header-badge" class="pi-badge" onclick="showPiProfile()" style="display:none;">
+      <div class="pi-badge-dot"></div>
+      <span id="pi-badge-name">π</span>
     </div>
     <button class="btn btn-ghost btn-sm" onclick="exitGame()">MENU</button>
   </div>
@@ -1457,6 +1582,123 @@ function toggleSetting(key, el) {
 // INIT
 // ==============================
 initSetup();
+
+// ==============================
+// PI NETWORK AUTHENTICATION
+// ==============================
+
+let piSession = null;
+
+class PiService {
+  constructor() { this.user = null; }
+
+  async init() {
+    if (!window.Pi) throw new Error('Pi SDK not loaded');
+    await Pi.init({ version: '2.0', sandbox: true });
+  }
+
+  async login(scopes = ['username']) {
+    const auth = await Pi.authenticate(scopes, this._onIncompletePaymentFound);
+    this.user = auth.user;
+    return { accessToken: auth.accessToken, user: auth.user };
+  }
+
+  _onIncompletePaymentFound(payment) {
+    console.warn('[Pi] Incomplete payment:', payment?.identifier);
+  }
+}
+
+const piService = new PiService();
+
+async function validateTokenWithBackend(accessToken) {
+  const res = await fetch('https://api.minepi.com/v2/me', {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  if (!res.ok) throw new Error(`Pi /me returned ${res.status}`);
+  return res.json();
+}
+
+function setPiStatus(msg, cls = '') {
+  const el = document.getElementById('pi-status-msg');
+  el.textContent = msg;
+  el.className = 'pi-status-msg' + (cls ? ' ' + cls : '');
+}
+
+function showPiUserCard(username, uid) {
+  document.getElementById('pi-user-name-display').textContent = `\u03c0 ${username}`;
+  document.getElementById('pi-user-uid-display').textContent = `UID: ${uid}`;
+  document.getElementById('pi-user-card').classList.add('visible');
+}
+
+function dismissAuthOverlay() {
+  const overlay = document.getElementById('pi-auth-overlay');
+  overlay.classList.add('hiding');
+  setTimeout(() => overlay.remove(), 520);
+
+  if (piSession) {
+    const name = piSession.username;
+    ['p1-name-solo','p1-name-multi'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = name;
+    });
+    const badge = document.getElementById('pi-header-badge');
+    const badgeName = document.getElementById('pi-badge-name');
+    if (badge) { badge.style.display = 'flex'; badgeName.textContent = name; }
+  }
+}
+
+function showPiProfile() {
+  if (!piSession) return;
+  const status = document.getElementById('status-bar');
+  const prev = status.textContent;
+  status.textContent = `\u03c0 ${piSession.username} - connecte`;
+  setTimeout(() => { status.textContent = prev; }, 2000);
+}
+
+async function triggerPiAuth() {
+  document.getElementById('pi-signin-btn').style.display = 'none';
+  document.getElementById('pi-skip-btn').style.display = 'none';
+  setPiStatus('Initialisation du SDK Pi...');
+
+  try {
+    await piService.init();
+    setPiStatus('Authentification en cours...');
+
+    const { accessToken, user } = await piService.login(['username']);
+    setPiStatus('Verification du token...');
+
+    const verified = await validateTokenWithBackend(accessToken);
+
+    piSession = {
+      username: verified.username || user.username,
+      uid: verified.uid,
+      accessToken
+    };
+
+    showPiUserCard(piSession.username, piSession.uid);
+    setPiStatus('Connecte avec succes !', 'success');
+    document.getElementById('pi-enter-btn').style.display = 'block';
+    setTimeout(dismissAuthOverlay, 1800);
+
+  } catch (err) {
+    console.error('[Pi Auth]', err);
+    const msg = err.message || '';
+    if (msg.includes('not loaded') || msg.includes('not defined')) {
+      setPiStatus('Pi Browser requis pour se connecter.', 'error');
+    } else if (msg.includes('cancel')) {
+      setPiStatus('Connexion annulee.', 'error');
+    } else if (msg.includes('401') || msg.includes('403')) {
+      setPiStatus('Token invalide - reessayez.', 'error');
+    } else {
+      setPiStatus('Connexion impossible. Mode invite active.', 'error');
+    }
+    document.getElementById('pi-signin-btn').style.display = 'block';
+    document.getElementById('pi-skip-btn').style.display = 'block';
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => { triggerPiAuth(); });
 </script>
 </body>
 </html>
